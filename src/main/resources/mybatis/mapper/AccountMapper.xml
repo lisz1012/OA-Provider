@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lisz.mapper.AccountMapper">
+  <resultMap id="BaseResultMap" type="com.lisz.entity.Account">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="username" jdbcType="VARCHAR" property="username" />
+    <result column="password" jdbcType="VARCHAR" property="password" />
+    <result column="nick_name" jdbcType="VARCHAR" property="nickName" />
+    <result column="age" jdbcType="INTEGER" property="age" />
+    <result column="location" jdbcType="VARCHAR" property="location" />
+    <result column="role" jdbcType="VARCHAR" property="role" />
+    <result column="profile_url" jdbcType="VARCHAR" property="profileUrl" />
+  </resultMap>
+  
+  <!-- 自定义结果集。包含了一对多的关系。只作增加，接受Role和Permission结果集List,由于都是在Account里面，所以type还是相同的实体类. 
+  id对应了下面select的id. 以前的各个字段都仍然需要-->
+  <resultMap id="findResultMap" type="com.lisz.entity.Account">
+  	<id column="aid" jdbcType="INTEGER" property="id" />
+    <result column="username" jdbcType="VARCHAR" property="username" />
+    <result column="password" jdbcType="VARCHAR" property="password" />
+    <result column="nick_name" jdbcType="VARCHAR" property="nickName" />
+    <result column="age" jdbcType="INTEGER" property="age" />
+    <result column="location" jdbcType="VARCHAR" property="location" />
+    <result column="role" jdbcType="VARCHAR" property="role" />
+    <result column="profile_url" jdbcType="VARCHAR" property="profileUrl" />
+    <collection property="roles" ofType="com.lisz.entity.Role">
+    	<!-- RoleMapper.xml中的两个属性，从他的resultMap标签里粘贴过来 -->
+    	<id column="rid" jdbcType="INTEGER" property="id" />
+    	<result column="role_name" jdbcType="VARCHAR" property="name" />
+    </collection>
+    <collection property="permissions" ofType="com.lisz.entity.Permission">
+    	<id column="pid" jdbcType="INTEGER" property="id" />
+	    <result column="uri" jdbcType="VARCHAR" property="uri" />
+	    <result column="permission_name" jdbcType="VARCHAR" property="name" />
+	    <result column="c" jdbcType="BIT" property="c" />
+	    <result column="r" jdbcType="BIT" property="r" />
+	    <result column="u" jdbcType="BIT" property="u" />
+	    <result column="d" jdbcType="BIT" property="d" />
+    </collection>
+  </resultMap>
+  
+  <select id="findById" resultMap="findResultMap">
+  	<!-- select * from account 
+	join account_role on (account.id = account_role.account_id) 
+	join role on (account_role.role_id = role.id)
+	left join role_permission on (role.id = role_permission.role_id)
+	left join permission on (role_permission.permission_id = permission.id);
+	 -->
+	 select account.id as aid, 
+	   role.id as rid,
+	   permission.id as pid,
+	   permission.uri as uri,
+	   username,
+	   password,
+	   nick_name,
+	   age,
+	   location,
+	   role,
+	   profile_url,
+	   role.name role_name, permission.name permission_name, permission.c, permission.r, permission.u, permission.d from account 
+	join account_role on (account.id = account_role.account_id) 
+	join role on (account_role.role_id = role.id)
+	left join role_permission on (role.id = role_permission.role_id)
+	left join permission on (role_permission.permission_id = permission.id)
+	where account.id = #{id};
+  </select>
+  
+  <select id="findByUsernameAndPassword" resultMap="findResultMap">
+  	<!-- select * from account 
+	join account_role on (account.id = account_role.account_id) 
+	join role on (account_role.role_id = role.id)
+	left join role_permission on (role.id = role_permission.role_id)
+	left join permission on (role_permission.permission_id = permission.id);
+	 -->
+	 select account.id as aid, 
+	   role.id as rid,
+	   permission.id as pid,
+	   permission.uri as uri,
+	   username,
+	   password,
+	   nick_name,
+	   age,
+	   location,
+	   role,
+	   profile_url,
+	   role.name role_name, permission.name permission_name, permission.c, permission.r, permission.u, permission.d from account 
+	join account_role on (account.id = account_role.account_id) 
+	join role on (account_role.role_id = role.id)
+	left join role_permission on (role.id = role_permission.role_id)
+	left join permission on (role_permission.permission_id = permission.id)
+	where account.username = #{username} and account.password = #{password};
+  </select>
+  
+  
+  
+  
+  
+  <insert id="addRolesForAccount">
+  	delete from account_role where account_id = #{accountId};
+  	insert into account_role (account_id,role_id) values
+  	<foreach collection="roleIds" separator="," index="index" item="roleId"><!-- 一条insert语句插入多条记录 -->
+  		(#{accountId},#{roleId})
+  	</foreach>
+  </insert>
+  
+  
+  
+  
+  <sql id="Example_Where_Clause">
+    <where>
+      <foreach collection="oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause">
+    <where>
+      <foreach collection="example.oredCriteria" item="criteria" separator="or">
+        <if test="criteria.valid">
+          <trim prefix="(" prefixOverrides="and" suffix=")">
+            <foreach collection="criteria.criteria" item="criterion">
+              <choose>
+                <when test="criterion.noValue">
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue">
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue">
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue">
+                  and ${criterion.condition}
+                  <foreach close=")" collection="criterion.value" item="listItem" open="(" separator=",">
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List">
+    id, username, `password`, nick_name, age, `location`, `role`, profile_url
+  </sql>
+  <select id="selectByExample" parameterType="com.lisz.mapper.AccountExample" resultMap="BaseResultMap">
+    select
+    <if test="distinct">
+      distinct
+    </if>
+    <include refid="Base_Column_List" />
+    from account
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null">
+      order by ${orderByClause}
+    </if>
+    <if test="limit != null">
+      <if test="offset != null">
+        limit ${offset}, ${limit}
+      </if>
+      <if test="offset == null">
+        limit ${limit}
+      </if>
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from account
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
+    delete from account
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.lisz.mapper.AccountExample">
+    delete from account
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="com.lisz.entity.Account" useGeneratedKeys="true">
+    insert into account (username, `password`, nick_name, 
+      age, `location`, `role`, 
+      profile_url)
+    values (#{username,jdbcType=VARCHAR}, #{password,jdbcType=VARCHAR}, #{nickName,jdbcType=VARCHAR}, 
+      #{age,jdbcType=INTEGER}, #{location,jdbcType=VARCHAR}, #{role,jdbcType=VARCHAR}, 
+      #{profileUrl,jdbcType=VARCHAR})
+  </insert>
+  <insert id="insertSelective" keyColumn="id" keyProperty="id" parameterType="com.lisz.entity.Account" useGeneratedKeys="true">
+    insert into account
+    <trim prefix="(" suffix=")" suffixOverrides=",">
+      <if test="username != null">
+        username,
+      </if>
+      <if test="password != null">
+        `password`,
+      </if>
+      <if test="nickName != null">
+        nick_name,
+      </if>
+      <if test="age != null">
+        age,
+      </if>
+      <if test="location != null">
+        `location`,
+      </if>
+      <if test="role != null">
+        `role`,
+      </if>
+      <if test="profileUrl != null">
+        profile_url,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides=",">
+      <if test="username != null">
+        #{username,jdbcType=VARCHAR},
+      </if>
+      <if test="password != null">
+        #{password,jdbcType=VARCHAR},
+      </if>
+      <if test="nickName != null">
+        #{nickName,jdbcType=VARCHAR},
+      </if>
+      <if test="age != null">
+        #{age,jdbcType=INTEGER},
+      </if>
+      <if test="location != null">
+        #{location,jdbcType=VARCHAR},
+      </if>
+      <if test="role != null">
+        #{role,jdbcType=VARCHAR},
+      </if>
+      <if test="profileUrl != null">
+        #{profileUrl,jdbcType=VARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.lisz.mapper.AccountExample" resultType="java.lang.Long">
+    select count(*) from account
+    <if test="_parameter != null">
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map">
+    update account
+    <set>
+      <if test="record.id != null">
+        id = #{record.id,jdbcType=INTEGER},
+      </if>
+      <if test="record.username != null">
+        username = #{record.username,jdbcType=VARCHAR},
+      </if>
+      <if test="record.password != null">
+        `password` = #{record.password,jdbcType=VARCHAR},
+      </if>
+      <if test="record.nickName != null">
+        nick_name = #{record.nickName,jdbcType=VARCHAR},
+      </if>
+      <if test="record.age != null">
+        age = #{record.age,jdbcType=INTEGER},
+      </if>
+      <if test="record.location != null">
+        `location` = #{record.location,jdbcType=VARCHAR},
+      </if>
+      <if test="record.role != null">
+        `role` = #{record.role,jdbcType=VARCHAR},
+      </if>
+      <if test="record.profileUrl != null">
+        profile_url = #{record.profileUrl,jdbcType=VARCHAR},
+      </if>
+    </set>
+    <if test="_parameter != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map">
+    update account
+    set id = #{record.id,jdbcType=INTEGER},
+      username = #{record.username,jdbcType=VARCHAR},
+      `password` = #{record.password,jdbcType=VARCHAR},
+      nick_name = #{record.nickName,jdbcType=VARCHAR},
+      age = #{record.age,jdbcType=INTEGER},
+      `location` = #{record.location,jdbcType=VARCHAR},
+      `role` = #{record.role,jdbcType=VARCHAR},
+      profile_url = #{record.profileUrl,jdbcType=VARCHAR}
+    <if test="_parameter != null">
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.lisz.entity.Account">
+    update account
+    <set>
+      <if test="username != null">
+        username = #{username,jdbcType=VARCHAR},
+      </if>
+      <if test="password != null">
+        `password` = #{password,jdbcType=VARCHAR},
+      </if>
+      <if test="nickName != null">
+        nick_name = #{nickName,jdbcType=VARCHAR},
+      </if>
+      <if test="age != null">
+        age = #{age,jdbcType=INTEGER},
+      </if>
+      <if test="location != null">
+        `location` = #{location,jdbcType=VARCHAR},
+      </if>
+      <if test="role != null">
+        `role` = #{role,jdbcType=VARCHAR},
+      </if>
+      <if test="profileUrl != null">
+        profile_url = #{profileUrl,jdbcType=VARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.lisz.entity.Account">
+    update account
+    set username = #{username,jdbcType=VARCHAR},
+      `password` = #{password,jdbcType=VARCHAR},
+      nick_name = #{nickName,jdbcType=VARCHAR},
+      age = #{age,jdbcType=INTEGER},
+      `location` = #{location,jdbcType=VARCHAR},
+      `role` = #{role,jdbcType=VARCHAR},
+      profile_url = #{profileUrl,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+</mapper>
